@@ -12,7 +12,7 @@ extension CKModifyRecordsOperation {
 		assert(recordIDsToDelete.isEmpty, "using CKModifyRecordsOperation.save() to delete records is not supported")
 		
 		guard let records = recordsToSave, records.isNotEmpty else { return }
-		if await Cirrus.instance.mutability.isReadOnlyForCloudOps {
+		if Cirrus.instance.mutability.isReadOnlyForCloudOps {
 			cirrus_log("Not saving \(records.count) records, no cloud mutability")
 			return
 		}
@@ -50,7 +50,7 @@ extension CKModifyRecordsOperation {
 		
 		guard let recordIDs = recordIDsToDelete, recordIDs.isNotEmpty else { return [] }
 		
-		if await Cirrus.instance.mutability.isReadOnlyForCloudOps {
+		if Cirrus.instance.mutability.isReadOnlyForCloudOps {
 			cirrus_log("Not deleting record, no cloud mutability")
 			return []
 		}

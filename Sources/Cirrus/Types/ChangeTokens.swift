@@ -8,12 +8,18 @@
 import Foundation
 import CloudKit
 
-public class ChangeTokens: Codable {
+public class ChangeTokens: Codable, Equatable {
 	public var tokens: [String: Data] = [:]
 	var url: URL?
 	
 	public init(saved: [String: Data]? = nil) {
 		tokens = saved ?? [:]
+	}
+	
+	public static func ==(lhs: ChangeTokens, rhs: ChangeTokens) -> Bool {
+		if lhs.url != rhs.url { return false }
+		if lhs.tokens != rhs.tokens { return false }
+		return true
 	}
 	
 	public static func tokens(at url: URL) -> ChangeTokens {

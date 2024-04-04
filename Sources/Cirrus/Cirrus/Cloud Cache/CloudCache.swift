@@ -17,7 +17,7 @@ public class CloudCache<CacheObjectType: CKRecordConvertable> {
 	
 	public func store(_ object: CacheObjectType) async throws {
 		let id = object.ckRecordID
-		if await !Cirrus.instance.state.isSignedIn { return }
+		if !Cirrus.instance.state.isSignedIn { return }
 		
 		if let record = try await database.fetchRecord(withID: id) {
 			try object.write(to: record)

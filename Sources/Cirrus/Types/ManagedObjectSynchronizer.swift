@@ -50,10 +50,10 @@ public class SimpleObjectSynchronizer: ManagedObjectSynchronizer {
 	}
 	
 	public func uploadLocalChanges() async {
-		if await Cirrus.instance.state.isOffline { return }
-		let syncableEntities = await Cirrus.instance.configuration.entities ?? []
+		if Cirrus.instance.state.isOffline { return }
+		let syncableEntities = Cirrus.instance.configuration.entities ?? []
 		var pending: [CKDatabase.Scope: [ModifiedRecord]] = [:]
-		let queuedDeletions = await QueuedDeletions.instance.pending
+		let queuedDeletions = QueuedDeletions.instance.pending
 
 		await context.perform {
 			for entity in syncableEntities {
@@ -73,7 +73,7 @@ public class SimpleObjectSynchronizer: ManagedObjectSynchronizer {
 			let deletions = queuedDeletions.deletions(in: scope.database)
 			do {
 				let deleted = try await scope.database.delete(recordIDs: deletions)
-				await QueuedDeletions.instance.clear(deleted: deleted.map { QueuedDeletions.Deletion(recordName: $0.recordName, scope: scope) })
+				QueuedDeletions.instance.clear(deleted: deleted.map { QueuedDeletions.Deletion(recordName: $0.recordName, scope: scope) })
 			} catch {
 				logg(error: error, "Failed to delete records: \(deletions)")
 			}
@@ -90,10 +90,10 @@ public class SimpleObjectSynchronizer: ManagedObjectSynchronizer {
 	}
 	
 	public func process(downloadedChange change: CKRecordChange, from database: CKDatabase) async {
-		guard let recordType = change.recordType, let info = await Cirrus.instance.configuration.entityInfo(for: recordType) else { return }
+		guard let recordType = change.recordType, let info = Cirrus.instance.configuration.entityInfo(for: recordType) else { return }
 		
-		let idField = await Cirrus.instance.configuration.idField
-		let resolver = await Cirrus.instance.configuration.conflictResolver
+		let idField = Cirrus.instance.configuration.idField
+		let resolver = Cirrus.instance.configuration.conflictResolver
 		do {
 			switch change {
 			case .changed(let id, let remote):

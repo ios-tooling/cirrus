@@ -53,10 +53,10 @@ public class Cirrus: ObservableObject {
 	}
 	
 	internal var cancelBag = Set<AnyCancellable>()
-	@FileBackedCodable(url: .library(named: "cirrus.local.dat"), initialValue: LocalState()) var localState
+	@CodableFileStorage(.library(named: "cirrus.local.dat")) var localState = LocalState()
 	
-	func reachabilityChanged() {
-		if Reachability.instance.isOffline {
+	@MainActor func reachabilityChanged(isOffline: Bool) {
+		if isOffline {
 			if case let .authenticated(id) = state {
 				state = .offline(id)
 			}
@@ -68,12 +68,17 @@ public class Cirrus: ObservableObject {
 	}
 	
 	init() {
-		Reachability.instance.setup()
-		Reachability.Notifications.reachabilityChanged.publisher()
-			.sink { _ in
-				self.reachabilityChanged()
-			}
-			.store(in: &cancelBag)
+		Task { @MainActor in
+			Reachability.instance.setup()
+			Reachability.Notifications.reachabilityChanged.publisher()
+				.sink { _ in
+					Task { @MainActor in
+						let offline = Reachability.instance.isOffline
+						self.reachabilityChanged(isOffline: offline)
+					}
+				}
+				.store(in: &cancelBag)
+		}
 	}
 }
 

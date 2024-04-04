@@ -48,7 +48,7 @@ public class AsyncRecordSequence: AsyncSequence {
 
 	func runQuery(cursor: CKQueryOperation.Cursor? = nil) async throws -> Bool {
 		if isRunning && cursor == nil { return true }
-		if await !Cirrus.instance.state.isSignedIn, database != .public { return false }
+		if !Cirrus.instance.state.isSignedIn, database != .public { return false }
 		
 		isRunning = true
 		var errors: [Error] = []
@@ -96,7 +96,7 @@ public class AsyncRecordSequence: AsyncSequence {
 		}
 		
 		if let error = errors.first {
-			await Cirrus.instance.shouldCancelAfterError(error)
+			Cirrus.instance.shouldCancelAfterError(error)
 		}
 		
 		return true
