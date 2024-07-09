@@ -22,7 +22,11 @@ extension Cirrus {
 	@MainActor func load(configuration config: Configuration) {
 		assert(configuration == nil, "You can only configure Cirrus once.")
 		configuration = config
-		container = CKContainer(identifier: config.containerIdentifer)
+		if let id = config.containerIdentifer {
+			container = CKContainer(identifier: id)
+		} else {
+			container = CKContainer.default()
+		}
 		if Reachability.instance.isOffline, let userID = localState.lastSignedInUserID { state = .offline(userID) }
 		
 #if canImport(UIKit)

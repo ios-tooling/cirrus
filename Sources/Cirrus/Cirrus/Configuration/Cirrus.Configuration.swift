@@ -13,7 +13,7 @@ extension Cirrus {
 	public struct Configuration {
 		public static var instance: Configuration!
 		
-		public var containerIdentifer: String
+		public var containerIdentifer: String?
 		public var zoneNames: [String] = []
 		public var defaultZoneName: String?
 		
@@ -30,7 +30,7 @@ extension Cirrus {
 }
 
 public extension Cirrus.Configuration {
-	init(identifier: String, zones: [String] = [], defaultZone: String? = nil) {
+	init(identifier: String? = nil, zones: [String] = [], defaultZone: String? = nil) {
 		containerIdentifer = identifier
 		zoneNames = zones
 		defaultZoneName = defaultZone ?? zoneNames.first

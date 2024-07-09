@@ -50,6 +50,7 @@ extension Cirrus {
 	}
 	
 	func setupZones() async throws {
+		if configuration.zoneNames.isEmpty { return }
 		let existingZones = try await container.privateCloudDatabase.allZones()
 		privateZones = [:]
 		for zone in existingZones {
