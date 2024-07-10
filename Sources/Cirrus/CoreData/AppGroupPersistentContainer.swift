@@ -8,7 +8,7 @@
 import CoreData
 
 @available(OSX 10.12, OSXApplicationExtension 10.12, iOS 10.0, iOSApplicationExtension 10.0, *)
-open class AppGroupPersistentContainer: NSPersistentContainer {
+open class AppGroupPersistentContainer: NSPersistentContainer, @unchecked Sendable {
 	static var applicationGroupIdentifier: String?
 	static var directoryName = "CirrusContainer"
 	

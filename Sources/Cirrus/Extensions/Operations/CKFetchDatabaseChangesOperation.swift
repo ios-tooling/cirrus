@@ -20,7 +20,7 @@ public enum CKZoneChange {
 	}
 }
 
-public class CirrusFetchDatabaseChangesOperation: CKFetchDatabaseChangesOperation {
+public class CirrusFetchDatabaseChangesOperation: CKFetchDatabaseChangesOperation, @unchecked Sendable {
 	var tokens = Cirrus.instance.localState.changeTokens
 	
 	public convenience init(database: CKDatabase, tokens: ChangeTokens) {

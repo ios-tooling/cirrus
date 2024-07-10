@@ -7,7 +7,7 @@
 
 import CloudKit
 
-extension CKAccountStatus: CustomStringConvertible {
+extension CKAccountStatus: @retroactive CustomStringConvertible {
 	public var description: String {
 		switch self {
 		case .couldNotDetermine: return "could not determine"

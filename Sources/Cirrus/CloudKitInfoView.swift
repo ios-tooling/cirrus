@@ -8,7 +8,7 @@
 import SwiftUI
 import CloudKit
 
-extension CKRecord: Identifiable {
+extension CKRecord: @retroactive Identifiable {
 	public var id: ID { recordID }
 }
 
