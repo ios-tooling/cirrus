@@ -97,6 +97,7 @@ public class AsyncRecordSequence: AsyncSequence {
 		
 		if let error = errors.first {
 			Cirrus.instance.shouldCancelAfterError(error)
+			return false
 		}
 		
 		return true

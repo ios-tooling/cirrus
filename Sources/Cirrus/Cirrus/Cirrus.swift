@@ -9,7 +9,7 @@ import Suite
 import CloudKit
 import Combine
 
-public class Cirrus: ObservableObject {
+public class Cirrus: ObservableObject, @unchecked Sendable {
 	public static let instance = Cirrus()
 	
 	public var mutability: Mutability = .normal
