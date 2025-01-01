@@ -21,7 +21,7 @@ public enum CKZoneChange {
 }
 
 public class CirrusFetchDatabaseChangesOperation: CKFetchDatabaseChangesOperation, @unchecked Sendable {
-	var tokens = Cirrus.instance.localState.changeTokens
+	var tokens: ChangeTokens?
 	
 	public convenience init(database: CKDatabase, tokens: ChangeTokens) {
 		self.init(previousServerChangeToken: tokens.changeToken(for: database))
@@ -42,13 +42,15 @@ public class CirrusFetchDatabaseChangesOperation: CKFetchDatabaseChangesOperatio
 				switch results {
 				case .failure(let error):
 					errors.append(error)
-					Task() { Cirrus.instance.shouldCancelAfterError(error) }
+					Task() { await Cirrus.instance.shouldCancelAfterError(error) }
 					continuation.resume(throwing: Cirrus.MultipleErrors.build(errors: errors))
 
 				case .success(let done):		// (serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool)
 					cirrus_log("Database change token: \(done.serverChangeToken), more: \(done.moreComing)")
-					self.tokens.setChangeToken(done.serverChangeToken, for: self.database!)
-					continuation.resume(returning: changes)
+                    Task {
+                        self.tokens?.setChangeToken(done.serverChangeToken, for: self.database!)
+                        continuation.resume(returning: changes)
+                    }
 				}
 			}
 			

@@ -20,12 +20,12 @@ extension Cirrus {
 	}
 	
 	@MainActor func load(configuration config: Configuration) {
-		assert(configuration == nil, "You can only configure Cirrus once.")
-		configuration = config
+		assert(Cirrus.configuration == nil, "You can only configure Cirrus once.")
+		Cirrus.configuration = config
 		if let id = config.containerIdentifer {
-			container = CKContainer(identifier: id)
+			Self.container = CKContainer(identifier: id)
 		} else {
-			container = CKContainer.default()
+			Self.container = CKContainer.default()
 		}
 		if Reachability.instance.isOffline, let userID = localState.lastSignedInUserID { state = .offline(userID) }
 		

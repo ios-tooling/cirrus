@@ -28,7 +28,7 @@ public extension Cirrus {
 				}
 			}
 			
-			container.add(op)
+			Self.container.add(op)
 		}
 	}
 }

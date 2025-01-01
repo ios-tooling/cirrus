@@ -21,9 +21,13 @@ open class WrappedCKRecord: ObservableObject, Identifiable, Equatable {
 	public var id: String { recordID.recordName }
 	
 	
-	required public init(record: CKRecord, in database: CKDatabase = .private) {
+	required public init(record: CKRecord, in database: CKDatabase?) async {
 		self.record = record
-		self.database = database
+		if let database {
+			self.database = database
+		} else {
+			self.database = .private
+		}
 		recordID = record.recordID
 		recordType = record.recordType
 		didLoad(record: record)
@@ -62,8 +66,12 @@ open class WrappedCKRecord: ObservableObject, Identifiable, Equatable {
 		return lhs.recordID == rhs.recordID
 	}
 		
-	public init(recordID: CKRecord.ID, recordType: CKRecord.RecordType, database: CKDatabase = .private) async throws {
-		self.database = database
+	public init(recordID: CKRecord.ID, recordType: CKRecord.RecordType, database: CKDatabase?) async throws {
+		if let database {
+			self.database = database
+		} else {
+			self.database = await .private
+		}
 		self.recordID = recordID
 		self.recordType = recordType
 		try await load()

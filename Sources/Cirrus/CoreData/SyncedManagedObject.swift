@@ -24,7 +24,7 @@ extension SyncedManagedObject {
 open class SyncedManagedObject: NSManagedObject, CKRecordSeed, Identifiable {
 	var isLoadingFromCloud = 0
 	var cirrus_changedKeys: Set<String> = []
-	open var id: String { self.value(forKey: Cirrus.instance.configuration.idField) as? String ?? "" }
+	open var id: String { self.value(forKey: Cirrus.configuration.idField) as? String ?? "" }
 	open var defaultDatabase: CKDatabase { .public }
 
 	public func deleteFromCloudKit() async throws {
@@ -32,11 +32,11 @@ open class SyncedManagedObject: NSManagedObject, CKRecordSeed, Identifiable {
 		_ = try await database.delete(recordID: id)
 	}
 	
-	public var locallyModifiedAt: Date? { self.value(forKey: Cirrus.instance.configuration.modifiedAtField) as? Date }
+	public var locallyModifiedAt: Date? { self.value(forKey: Cirrus.configuration.modifiedAtField) as? Date }
 	var cirrusRecordStatus: RecordStatusFlags {
-		get { RecordStatusFlags(rawValue: self.value(forKey: Cirrus.instance.configuration.statusField) as? Int32 ?? 0) }
+		get { RecordStatusFlags(rawValue: self.value(forKey: Cirrus.configuration.statusField) as? Int32 ?? 0) }
 		set {
-			self.setValue(newValue.rawValue, forKey: Cirrus.instance.configuration.statusField)
+			self.setValue(newValue.rawValue, forKey: Cirrus.configuration.statusField)
 		}
 	}
 	
@@ -49,16 +49,16 @@ open class SyncedManagedObject: NSManagedObject, CKRecordSeed, Identifiable {
 	}
 	
 	open override func didChangeValue(forKey key: String) {
-		if isLoadingFromCloud == 0, !cirrus_changedKeys.contains(key), key != Cirrus.instance.configuration.idField, key != Cirrus.instance.configuration.statusField, key != Cirrus.instance.configuration.modifiedAtField {
+		if isLoadingFromCloud == 0, !cirrus_changedKeys.contains(key), key != Cirrus.configuration.idField, key != Cirrus.configuration.statusField, key != Cirrus.configuration.modifiedAtField {
 			cirrus_changedKeys.insert(key)
-			self.setValue(Date(), forKey: Cirrus.instance.configuration.modifiedAtField)
+			self.setValue(Date(), forKey: Cirrus.configuration.modifiedAtField)
 		}
 		super.didChangeValue(forKey: key)
 	}
 	
 	open override func awakeFromInsert() {
 		super.awakeFromInsert()
-		self.setValue(UUID().uuidString, forKey: Cirrus.instance.configuration.idField)
+		self.setValue(UUID().uuidString, forKey: Cirrus.configuration.idField)
 		setDatabase(defaultDatabase)
 	}
 	
@@ -72,7 +72,7 @@ open class SyncedManagedObject: NSManagedObject, CKRecordSeed, Identifiable {
 	open var recordZone: CKRecordZone? {
 		if let parent = parent { return parent.recordZone }
 		switch database {
-		case .private: return Cirrus.instance.defaultPrivateZone
+		case .private: return nil // #FIXME return Cirrus.instance.defaultPrivateZone
 		default: return nil
 		}
 		
@@ -83,8 +83,8 @@ open class SyncedManagedObject: NSManagedObject, CKRecordSeed, Identifiable {
 		return self.value(forKey: name) as? SyncedManagedObject
 	}
 	
-	open var parentRelationshipName: String? { Cirrus.instance.configuration.entityInfo(for: entity)?.parentKey }
-	open var savedRelationshipNames: [String] { Cirrus.instance.configuration.entityInfo(for: entity)?.pertinentRelationships ?? [] }
+	open var parentRelationshipName: String? { Cirrus.configuration.entityInfo(for: entity)?.parentKey }
+	open var savedRelationshipNames: [String] { Cirrus.configuration.entityInfo(for: entity)?.pertinentRelationships ?? [] }
 }
 
 extension SyncedManagedObject {
@@ -96,11 +96,11 @@ extension SyncedManagedObject {
 	
 	func load(cloudKitRecord: CKRecord, using connector: ReferenceConnector?, from database: CKDatabase) throws {
 		isLoadingFromCloud += 1
-		let statusFieldKey = Cirrus.instance.configuration.statusField
-		let modifiedAtKey = Cirrus.instance.configuration.modifiedAtField
+		let statusFieldKey = Cirrus.configuration.statusField
+		let modifiedAtKey = Cirrus.configuration.modifiedAtField
 		
 		self.setValue(cloudKitRecord.modificationDate, forKey: modifiedAtKey)
-		self.setValue(cloudKitRecord.recordID.recordName, forKey: Cirrus.instance.configuration.idField)
+		self.setValue(cloudKitRecord.recordID.recordName, forKey: Cirrus.configuration.idField)
 		for key in cloudKitRecord.allKeys() {
 			if key == statusFieldKey || key == modifiedAtKey { continue }
 			let value = cloudKitRecord[key]
@@ -119,7 +119,7 @@ extension SyncedManagedObject {
 			}
 		}
 		
-		if let parent = cloudKitRecord.parent, let parentKey = Cirrus.instance.configuration.entityInfo(for: entity)?.parentKey {
+		if let parent = cloudKitRecord.parent, let parentKey = Cirrus.configuration.entityInfo(for: entity)?.parentKey {
 			connector?.connect(reference: parent, to: self, key: parentKey)
 		}
 		
@@ -163,18 +163,18 @@ extension SyncedManagedObject {
 	}
 	
 	public var recordID: CKRecord.ID? {
-		guard let id = self.value(forKey: Cirrus.instance.configuration.idField) as? String else { return nil }
+		guard let id = self.value(forKey: Cirrus.configuration.idField) as? String else { return nil }
 		if self.database == .public { return CKRecord.ID(recordName: id) }
 		if let zone = self.recordZone { return CKRecord.ID(recordName: id, zoneID: zone.zoneID) }
 		return CKRecord.ID(recordName: id)
 	}
 	
 	public var recordType: CKRecord.RecordType {
-		guard let info = Cirrus.instance.configuration.entityInfo(for: entity) else { return entity.name! }
+		guard let info = Cirrus.configuration.entityInfo(for: entity) else { return entity.name! }
 		return info.recordType
 	}
 	
-	public var savedFieldNames: [String] { Array(entity.attributesByName.keys).removing([Cirrus.instance.configuration.idField, Cirrus.instance.configuration.statusField, Cirrus.instance.configuration.modifiedAtField]) }
+	public var savedFieldNames: [String] { Array(entity.attributesByName.keys).removing([Cirrus.configuration.idField, Cirrus.configuration.statusField, Cirrus.configuration.modifiedAtField]) }
 	public func reference(for name: String, action: CKRecord.ReferenceAction = .none) -> CKRecord.Reference? {
 		guard
 			let relationship = entity.relationshipsByName[name],

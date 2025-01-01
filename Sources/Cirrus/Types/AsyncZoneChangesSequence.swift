@@ -55,7 +55,8 @@ public actor AsyncZoneChangesSequence: AsyncSequence {
 	
 	private func startFetch() async throws -> Bool {
 		if isRunning { return true }
-		if !Cirrus.instance.state.isSignedIn || database == .public || zoneIDs.isEmpty { return false }
+		if database == .public { return false }
+		if await !Cirrus.instance.state.isSignedIn || zoneIDs.isEmpty { return false }
 
 		isRunning = true
 		
@@ -76,7 +77,7 @@ public actor AsyncZoneChangesSequence: AsyncSequence {
 			operation.recordWasChangedBlock = { id, result in
 				switch result {
 				case .failure(let error):
-					Task { Cirrus.instance.shouldCancelAfterError(error) }
+					Task { await Cirrus.instance.shouldCancelAfterError(error) }
 					self.errors.append(error)
 					
 				case .success(let record):
@@ -89,7 +90,7 @@ public actor AsyncZoneChangesSequence: AsyncSequence {
 			operation.recordZoneFetchResultBlock = { zoneID, results in
 				switch results {
 				case .failure(let error):
-					Task { Cirrus.instance.shouldCancelAfterError(error) }
+					Task { await Cirrus.instance.shouldCancelAfterError(error) }
 					self.errors.append(error)
 					
 				case .success(let (serverToken, _, moreComing)):		// (serverChangeToken: CKServerChangeToken, clientChangeTokenData: Data?, moreComing: Bool)
@@ -102,7 +103,7 @@ public actor AsyncZoneChangesSequence: AsyncSequence {
 			operation.fetchRecordZoneChangesResultBlock = { result in
 				switch result {
 				case .failure(let error):
-					Task { Cirrus.instance.shouldCancelAfterError(error) }
+					Task { await Cirrus.instance.shouldCancelAfterError(error) }
 					self.errors.append(error)
 					continuation.resume(throwing: error)
 

@@ -38,8 +38,9 @@ public struct SimpleManagedObject: CirrusManagedObjectConfiguration {
 		self.pertinentRelationships = pertinent
 	}
 	
-	public func record(with id: CKRecord.ID, in context: NSManagedObjectContext) -> SyncedManagedObject? {
-		let pred = NSPredicate(format: "\(Cirrus.instance.configuration.idField) == %@", id.recordName)
+    @MainActor public func record(with id: CKRecord.ID, in context: NSManagedObjectContext) -> SyncedManagedObject? {
+        let idFieldName = Cirrus.configuration.idField
+		let pred = NSPredicate(format: "\(idFieldName) == %@", id.recordName)
 		return context.fetchAny(named: entityName, matching: pred) as? SyncedManagedObject
 	}
 	

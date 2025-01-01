@@ -20,18 +20,18 @@ extension CKRecord: CKRecordProviding {
 
 public extension CKDatabase {
 	enum Kind: String { case `public`, `private`, shared
-		var database: CKDatabase {
+		var database: CKDatabase  { get {
 			switch self {
-			case .public: return .public
-			case .private: return .private
-			case .shared: return .shared
+			case .public: .public
+			case .private: .private
+			case .shared: .shared
 			}
-		}
+		}}
 	}
 	
-    static var `public`: CKDatabase { Cirrus.instance.container.publicCloudDatabase }
-    static var `private`: CKDatabase { Cirrus.instance.container.privateCloudDatabase }
-    static var `shared`: CKDatabase { Cirrus.instance.container.sharedCloudDatabase }
+	static var `public`: CKDatabase { get { Cirrus.container.publicCloudDatabase } }
+	static var `private`: CKDatabase { get { Cirrus.container.privateCloudDatabase }}
+		 static var `shared`: CKDatabase { get { Cirrus.container.sharedCloudDatabase }}
 
 	enum RecordChangesQueryType { case recent, all, createdOnly }
 	func records(ofType type: CKRecord.RecordType, matching predicate: NSPredicate = NSPredicate(value: true), sortedBy: [NSSortDescriptor] = [], in zoneID: CKRecordZone.ID? = nil) -> AsyncRecordSequence {
@@ -44,13 +44,13 @@ public extension CKDatabase {
 	}
 	
 	func resolve(reference: CKRecord.Reference?) async throws -> CKRecord? {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		guard let reference else { return nil }
 		return try await record(for: reference.recordID)
 	}
 
-	func changes(in zoneIDs: [CKRecordZone.ID], queryType: RecordChangesQueryType = .recent, tokens: ChangeTokens) throws -> AsyncZoneChangesSequence {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+	func changes(in zoneIDs: [CKRecordZone.ID], queryType: RecordChangesQueryType = .recent, tokens: ChangeTokens) async throws -> AsyncZoneChangesSequence {
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 
 		let noDefaultZone = zoneIDs.filter { $0.zoneName != "_defaultZone" }
 		let seq = AsyncZoneChangesSequence(zoneIDs: noDefaultZone, in: self, queryType: queryType, tokens: tokens)
@@ -59,7 +59,7 @@ public extension CKDatabase {
 	}
 	
     func delete(recordID: CKRecord.ID) async throws -> Bool {
-		 if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		 if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 
 		 let result = try await delete(recordIDs: [recordID])
 		return result.first == recordID
@@ -67,20 +67,20 @@ public extension CKDatabase {
 
     func delete(recordIDs: [CKRecord.ID]?) async throws -> [CKRecord.ID] {
 		 guard let ids = recordIDs, ids.isNotEmpty else { return [] }
-		 if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		 if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 
 		let op = CKModifyRecordsOperation(recordIDsToDelete: recordIDs)
 		do {
 			return try await op.delete(from: self)
 		} catch {
-			Cirrus.instance.shouldCancelAfterError(error)
+			await Cirrus.instance.shouldCancelAfterError(error)
 			throw error
 		}
 	}
 	
 	func save(records: [CKRecordProviding]?, atomically: Bool = true, conflictResolver: ConflictResolver? = nil) async throws {
 		guard let records = records, records.isNotEmpty else { return }
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 
 		let chunkSize = 350
 		let recordChunks = records.breakIntoChunks(ofSize: chunkSize)
@@ -89,7 +89,7 @@ public extension CKDatabase {
 			let saved = chunk.map { $0.record }
 			let op = CKModifyRecordsOperation(recordsToSave: saved)
 			var resolver = conflictResolver
-			if resolver == nil { resolver = Cirrus.instance.configuration.conflictResolver }
+			if resolver == nil { resolver = await Cirrus.configuration.conflictResolver }
 
 			do {
 				try await op.save(in: self)
@@ -97,7 +97,7 @@ public extension CKDatabase {
 				if let updatedRecords = try await resolver?.resolve(error: error, in: chunk, database: self) {
 					try await save(records: updatedRecords, atomically: atomically, conflictResolver: conflictResolver)
 				} else {
-					Cirrus.instance.shouldCancelAfterError(error)
+					await Cirrus.instance.shouldCancelAfterError(error)
 					throw error
 				}
 			}
@@ -106,14 +106,14 @@ public extension CKDatabase {
 	
 	func save(record: CKRecordProviding?, conflictResolver: ConflictResolver? = nil) async throws {
 		guard let record = record else { return }
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 
         do {
             try await save(records: [record], conflictResolver: conflictResolver)
         } catch let error as CKError {
             switch error.cloudKitErrorCode {
             case .zoneNotFound:
-                if Cirrus.instance.autoCreateNewZones {
+                if await Cirrus.instance.autoCreateNewZones {
                     _ = try await createZone(named: record.record.recordID.zoneID.zoneName)
                     try await save(records: [record], conflictResolver: conflictResolver)
                } else {
@@ -128,13 +128,13 @@ public extension CKDatabase {
 
 	func delete(record: CKRecord?) async throws {
 		guard let record = record else { return }
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		let op = CKModifyRecordsOperation(recordIDsToDelete: [record.recordID])
 		_ = try await op.delete(from: self)
 	}
 	
 	func fetchRecords(ofType type: CKRecord.RecordType, matching predicate: NSPredicate = .init(value: true), inZone: CKRecordZone.ID? = nil, keys: [CKRecord.FieldKey]? = nil, limit: Int = CKQueryOperation.maximumResults) async throws -> [CKRecord] {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		let query = CKQuery(recordType: type, predicate: predicate)
 		do {
 			var allResults: [CKRecord] = []
@@ -163,14 +163,14 @@ public extension CKDatabase {
 		} catch let error as CKError {
 			switch error.code {
 			default:
-				Cirrus.instance.shouldCancelAfterError(error)
+				await Cirrus.instance.shouldCancelAfterError(error)
 				throw error
 			}
 		}
 	}
 	
 	func fetchRecord(withID id: CKRecord.ID) async throws -> CKRecord? {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		do {
 			return try await record(for: id)
 		} catch let error as CKError {
@@ -182,7 +182,7 @@ public extension CKDatabase {
 				return nil
 				
 			default:
-				Cirrus.instance.shouldCancelAfterError(error)
+				await Cirrus.instance.shouldCancelAfterError(error)
 				throw error
 			}
 		}
@@ -191,7 +191,7 @@ public extension CKDatabase {
 
 extension CKDatabase {
 	public func allZones() async throws -> [CKRecordZone] {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		let op = CKFetchRecordZonesOperation.fetchAllRecordZonesOperation()
 		var zones: [CKRecordZone] = []
 		var errors: [Error] = []
@@ -219,14 +219,14 @@ extension CKDatabase {
 	}
 	
 	public func fetchZone(withID target: CKRecordZone.ID) async throws -> CKRecordZone? {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		let all = try await allZones()
 		return all.first { $0.zoneID.ownerName == target.ownerName && $0.zoneID.zoneName == target.zoneName }
 	}
 	
 	public func createZone(named name: String) async throws -> CKRecordZone {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
-		if self == .private, let zone = Cirrus.instance.privateZone(named: name) { return zone }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await self == .private, let zone = await Cirrus.instance.privateZone(named: name) { return zone }
 		
 		let newZones = try await setup(zones: [name])
 		if let newZone = newZones[name] { return newZone }
@@ -234,7 +234,7 @@ extension CKDatabase {
 	}
 	
 	@discardableResult func setup(zones names: [String]) async throws -> [String: CKRecordZone] {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		let zones = Dictionary(uniqueKeysWithValues: names.map { ($0, CKRecordZone(zoneName: $0)) })
 		let op = CKModifyRecordZonesOperation(recordZonesToSave: Array(zones.values), recordZoneIDsToDelete: nil)
 		
@@ -259,7 +259,7 @@ extension CKDatabase {
 	}
 	
 	public func allRecordIDs(from recordTypes: [CKRecord.RecordType], in zone: CKRecordZone? = nil) async throws -> FetchedRecordIDs {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		var results = FetchedRecordIDs()
 		
 		for recordType in recordTypes {
@@ -276,7 +276,7 @@ extension CKDatabase {
 	}
 
 	public func deleteAll(from recordTypes: [CKRecord.RecordType], in zone: CKRecordZone? = nil) async throws {
-		if Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
+		if await Cirrus.instance.isOffline { throw Cirrus.CirrusError.offline }
 		let ids = try await allRecordIDs(from: recordTypes, in: zone)
 		let chunkSize = 30
 		let idChunks = ids.all.breakIntoChunks(ofSize: chunkSize)
@@ -298,14 +298,14 @@ extension CKDatabase {
 
 
 extension CKDatabase.Scope: Codable {
-	public var database: CKDatabase {
+	public var database: CKDatabase { get {
 		switch self {
-		case .private: return Cirrus.instance.container.privateCloudDatabase
-		case .public: return Cirrus.instance.container.publicCloudDatabase
-		case .shared: return Cirrus.instance.container.sharedCloudDatabase
-		default: return Cirrus.instance.container.privateCloudDatabase
+		case .private: Cirrus.container.privateCloudDatabase
+		case .public: Cirrus.container.publicCloudDatabase
+		case .shared: Cirrus.container.sharedCloudDatabase
+		default: Cirrus.container.privateCloudDatabase
 		}
-	}
+	}}
 	public static var allScopes: [CKDatabase.Scope] {
 		[.private, .public, .shared]
 	}

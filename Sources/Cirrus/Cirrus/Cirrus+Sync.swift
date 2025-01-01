@@ -11,7 +11,7 @@ import Suite
 
 extension Cirrus {
 	func updateChanges(in context: NSManagedObjectContext) {
-		let unsyncedObjects = context.recentlyChangedObjects.sorted { self.configuration.shouldEntity($0.entity, sortBefore: $1.entity) }
+		let unsyncedObjects = context.recentlyChangedObjects.sorted { Self.configuration.shouldEntity($0.entity, sortBefore: $1.entity) }
 		let deletedObjects = context.recentlyDeletedObjects
 		
 		for object in deletedObjects {
@@ -26,6 +26,6 @@ extension Cirrus {
 			}
 		}
 		
-		Cirrus.instance.configuration.synchronizer?.startSync()
+		Cirrus.configuration.synchronizer?.startSync()
 	}
 }

@@ -11,13 +11,17 @@ import CloudKit
 public class CloudCache<CacheObjectType: CKRecordConvertable> {
 	let database: CKDatabase
 	
-	public init(database: CKDatabase = .public) {
-		self.database = database
+	public init(database: CKDatabase?) async {
+		if let database {
+			self.database = database
+		} else {
+			self.database = await .public
+		}
 	}
 	
 	public func store(_ object: CacheObjectType) async throws {
 		let id = object.ckRecordID
-		if !Cirrus.instance.state.isSignedIn { return }
+		if await !Cirrus.instance.state.isSignedIn { return }
 		
 		if let record = try await database.fetchRecord(withID: id) {
 			try object.write(to: record)

@@ -14,9 +14,9 @@ public struct CloudKitShareView: UIViewControllerRepresentable {
 	let share: CKShare
 	var container: CKContainer
 	
-	public init(share: CKShare, container: CKContainer = Cirrus.instance.container) {
+	public init(share: CKShare, container: CKContainer?) {
 		self.share = share
-		self.container = container
+		self.container = container ?? Cirrus.container
 	}
 
 	public func makeUIViewController(context: Context) -> UICloudSharingController {

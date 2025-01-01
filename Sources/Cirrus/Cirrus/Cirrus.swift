@@ -18,9 +18,18 @@ public class Cirrus: ObservableObject, @unchecked Sendable {
 		if state != oldValue { currentState.send(state) }
 	}}
 	public var cloudQuotaExceeded = false { didSet { objectWillChange.sendOnMain() }}
-	public var configuration: Configuration!
-	
-	public var container: CKContainer!
+	static nonisolated public var configuration: Configuration! {
+		get { _configuration.value }
+		set { _configuration.value = newValue }
+	}
+	static nonisolated private let _configuration: CurrentValueSubject<Configuration?, Never> = .init(nil)
+
+	static nonisolated public var container: CKContainer! {
+		get { _container.value }
+		set { _container.value = newValue }
+	}
+	static nonisolated private let _container: CurrentValueSubject<CKContainer?, Never> = .init(nil)
+
 	public var sharedZones: [CKRecordZone] = []
 	public var privateZones: [String: CKRecordZone] = [:]
 	public var defaultPrivateZone: CKRecordZone?
@@ -28,7 +37,7 @@ public class Cirrus: ObservableObject, @unchecked Sendable {
 	public var privateZoneIDs: [CKRecordZone.ID] { Array(privateZones.values.map { $0.zoneID })}
 	public var sharedZoneIDs: [CKRecordZone.ID] { Array(sharedZones.map { $0.zoneID })}
 	
-	public var isConfigured: Bool { configuration != nil }
+	public var isConfigured: Bool { Self.configuration != nil }
 	public var isOffline: Bool { if case .offline = state { return true } else { return false }}
 	public var currentState: CurrentValueSubject<AuthenticationState, Never> = .init(.notLoggedIn)
 

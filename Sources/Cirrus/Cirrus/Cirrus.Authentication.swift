@@ -14,13 +14,13 @@ extension Cirrus {
 		
 		if state != .temporaryUnavailable { self.state = .signingIn }
 		do {
-			let status = try await container.accountStatus()
+			let status = try await Self.container.accountStatus()
 			switch status {
 			case .couldNotDetermine, .noAccount, .restricted, .temporarilyUnavailable:
 				self.state = .denied
 				
 			case .available:
-				let id = try await container.userRecordID()
+				let id = try await Self.container.userRecordID()
 				
 				if await Reachability.instance.setupAndCheckForOnline() {
 					try await setupZones()
@@ -50,17 +50,17 @@ extension Cirrus {
 	}
 	
 	func setupZones() async throws {
-		if configuration.zoneNames.isEmpty { return }
-		let existingZones = try await container.privateCloudDatabase.allZones()
+		if Cirrus.configuration.zoneNames.isEmpty { return }
+		let existingZones = try await Self.container.privateCloudDatabase.allZones()
 		privateZones = [:]
 		for zone in existingZones {
 			privateZones[zone.zoneID.zoneName] = zone
 		}
 		
-		sharedZones = try await container.sharedCloudDatabase.allZones()
-		let missing = configuration.zoneNames.filter({ privateZones[$0] == nil })
+		sharedZones = try await Self.container.sharedCloudDatabase.allZones()
+		let missing = Cirrus.configuration.zoneNames.filter({ privateZones[$0] == nil })
 		if !missing.isEmpty {
-			self.privateZones = try await container.privateCloudDatabase.setup(zones: missing)
+			self.privateZones = try await Self.container.privateCloudDatabase.setup(zones: missing)
 		}
 	}
 	

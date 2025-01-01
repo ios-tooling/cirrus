@@ -23,7 +23,8 @@ extension NSManagedObjectContext {
 	}
 	
 	func changedRecords(named name: String) -> [SyncedManagedObject] {
+        let statusName = Cirrus.configuration.statusField
 		let flag = SyncedManagedObject.RecordStatusFlags.hasLocalChanges.rawValue
-		return fetchAll(named: name, matching: NSPredicate(format: "(\(Cirrus.instance.configuration.statusField) & %i) == %i", flag, flag)) as? [SyncedManagedObject] ?? []
+		return fetchAll(named: name, matching: NSPredicate(format: "(\(statusName) & %i) == %i", flag, flag)) as? [SyncedManagedObject] ?? []
 	}
 }

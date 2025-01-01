@@ -22,7 +22,7 @@ extension CKDatabaseCache {
 				recordChanges = try await fetchAllZoneChanges()
 			}
 			
-			process(changes: recordChanges)
+			await process(changes: recordChanges)
 			cirrus_log("Finished pull changes in \(scope.name): \(zoneID?.zoneName ?? "--")")
 		} catch {
 			cirrus_log("Failing pull changes in \(scope.name): \(zoneID?.zoneName ?? "--"): \(error)")
@@ -30,7 +30,7 @@ extension CKDatabaseCache {
 		isPullingChanges = false
 	}
 	
-	func process(changes: RecordChanges) {
+	func process(changes: RecordChanges) async {
 		if !changes.deleted.isEmpty || !changes.modified.isEmpty { cirrus_log("\(changes.deleted.count) records deleted from \(scope.name), \(changes.modified.count) changed") }
 	
 		for deleted in changes.deleted {
@@ -47,12 +47,13 @@ extension CKDatabaseCache {
 			}
 		}
 		
-		load(records: changes.modified)
+		await load(records: changes.modified)
 	}
 	
 	func fetchAllZoneChanges() async throws -> RecordChanges {
+		let db = await scope.database
 		let changes: (modifications: [CKDatabase.DatabaseChange.Modification], deletions: [CKDatabase.DatabaseChange.Deletion], changeToken: CKServerChangeToken, moreComing: Bool) = try await withCheckedThrowingContinuation { continuation in
-			scope.database.fetchDatabaseChanges(since: container.changeTokens.changeToken(for: scope.database)) { results in
+			db.fetchDatabaseChanges(since: container.changeTokens.changeToken(for: db)) { results in
 				//			Result<(modifications: [CKDatabase.DatabaseChange.Modification], deletions: [CKDatabase.DatabaseChange.Deletion], changeToken: CKServerChangeToken, moreComing: Bool), Error> in
 				
 				switch results {
@@ -67,7 +68,7 @@ extension CKDatabaseCache {
 		
 		var returnedChanges = RecordChanges()
 		returnedChanges.deletedZones = changes.deletions.map { $0.zoneID }
-		container.changeTokens.setChangeToken(changes.changeToken, for: scope.database)
+		container.changeTokens.setChangeToken(changes.changeToken, for: db)
 		for change in changes.modifications {
 			returnedChanges = returnedChanges + (try await fetchChanges(in: scope, zoneID: change.zoneID))
 		}
@@ -76,8 +77,9 @@ extension CKDatabaseCache {
 	}
 	
 	func fetchChanges(in scope: CKDatabase.Scope, zoneID: CKRecordZone.ID) async throws -> RecordChanges {
+		let db = await scope.database
 		return try await withCheckedThrowingContinuation { continuation in
-			scope.database.fetchRecordZoneChanges(inZoneWith: zoneID, since: container.changeTokens.changeToken(for: zoneID)) { results in
+			db.fetchRecordZoneChanges(inZoneWith: zoneID, since: container.changeTokens.changeToken(for: zoneID)) { results in
 				
 //				Result<(modificationResultsByID: [CKRecord.ID : Result<CKDatabase.RecordZoneChange.Modification, Error>], deletions: [CKDatabase.RecordZoneChange.Deletion], changeToken: CKServerChangeToken, moreComing: Bool), Error> in
 

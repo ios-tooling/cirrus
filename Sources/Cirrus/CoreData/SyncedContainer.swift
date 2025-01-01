@@ -39,7 +39,7 @@ public class SyncedContainer: ObservableObject {
 		self.container = AppGroupPersistentContainer(name: name, managedObjectModel: model ?? NSManagedObjectModel(contentsOf: bundle.url(forResource: name, withExtension: "momd")!)!)
 		
 		self.container.loadPersistentStores { desc, error in
-			Studio.logg(error: error, "Problem loading persistent stores in a SyncedContainer")
+			Suite.logg(error: error, "Problem loading persistent stores in a SyncedContainer")
 		}
 		
 		viewContext = container.viewContext
@@ -88,13 +88,13 @@ public class SyncedContainer: ObservableObject {
 		let isFirstSync = await importContext.perform { self.importContext.isEmpty }
 		
 		var database: CKDatabase! = db
-		if database == nil { database = Cirrus.instance.container.privateCloudDatabase }
+		if database == nil { database = await Cirrus.container.privateCloudDatabase }
 		let zoneIDs = try await CirrusFetchDatabaseChangesOperation(database: database, tokens: Cirrus.instance.localState.changeTokens).changedZones().compactMap { $0.changedZoneID }
 		
 		let queryType: CKDatabase.RecordChangesQueryType = fromBeginning ? .all : (isFirstSync ? .createdOnly : .recent)
 		
 		do {
-			for try await change in try database.changes(in: zoneIDs, queryType: queryType, tokens: Cirrus.instance.localState.changeTokens) {
+			for try await change in try await database.changes(in: zoneIDs, queryType: queryType, tokens: await Cirrus.instance.localState.changeTokens) {
 				if SuiteLogger.instance.level == .verbose {
 					switch change {
 					case .deleted(_, let type): if !isFirstSync { logg("Deleted \(type)") }
@@ -102,10 +102,10 @@ public class SyncedContainer: ObservableObject {
 					case .badRecord: logg("Bad Record")
 					}
 				}
-				await Cirrus.instance.configuration.synchronizer?.process(downloadedChange: change, from: database)
+				await Cirrus.configuration.synchronizer?.process(downloadedChange: change, from: database)
 			}
-			await Cirrus.instance.configuration.synchronizer?.finishImporting()
-			await Cirrus.instance.configuration.synchronizer?.uploadLocalChanges()
+			await Cirrus.configuration.synchronizer?.finishImporting()
+			await Cirrus.configuration.synchronizer?.uploadLocalChanges()
 			Cirrus.Notifications.syncCompleted.notify()
 			isSyncing = false
 		}

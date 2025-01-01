@@ -8,7 +8,7 @@
 import CloudKit
 
 extension CKRecord.ID {
-	func zone(in scope: CKDatabase.Scope) -> CKRecordZone? {
+	@MainActor func zone(in scope: CKDatabase.Scope) -> CKRecordZone? {
 		Cirrus.instance.zone(withID: zoneID, in: scope)
 	}
 	

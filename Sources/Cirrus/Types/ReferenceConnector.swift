@@ -34,10 +34,10 @@ public class ReferenceConnector {
 		}
 	}
 	
-	@discardableResult func resolve(reference: CKRecord.Reference, to target: SyncedManagedObject, key: String) -> Bool {
+    @discardableResult func resolve(reference: CKRecord.Reference, to target: SyncedManagedObject, key: String) -> Bool {
 		guard
 			let relationship = target.entity.relationshipsByName[key],
-			let info = Cirrus.instance.configuration.entityInfo(for: relationship.destinationEntity)
+			let info = Cirrus.configuration.entityInfo(for: relationship.destinationEntity)
 		else { return false }
 		
 		if let connected = info.record(with: reference.recordID, in: context) {

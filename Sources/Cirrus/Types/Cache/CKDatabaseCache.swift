@@ -47,7 +47,7 @@ public class CKDatabaseCache: ObservableObject {
 			guard let ckRecord = try await scope.database.fetchRecord(withID: id) else { return nil }
 
 			let recordClass = container.translator(ckRecord.recordType) ?? WrappedCKRecord.self
-			let newRecord = recordClass.init(record: ckRecord, in: scope.database)
+			let newRecord = await recordClass.init(record: ckRecord, in: scope.database)
 			records[id] = newRecord
 			return newRecord as? Record
 		} catch {
@@ -73,7 +73,7 @@ public class CKDatabaseCache: ObservableObject {
 		save(record: record)
 	}
 	
-	public func load(records: [CKRecord]) {
+	public func load(records: [CKRecord]) async {
 		for record in records {
 			if let current = self.records[record.recordID] {
 				current.merge(fromLatest: record)
@@ -83,7 +83,7 @@ public class CKDatabaseCache: ObservableObject {
 				if record.recordType == CKRecord.cloudShareRecordType { continue }					 // don't worry about cloudkit shares
 				let type = container.translator(record.recordType) ?? WrappedCKRecord.self
 				
-				let newRecord = type.init(record: record, in: scope.database)
+				let newRecord = await type.init(record: record, in: scope.database)
 				self.records[record.recordID] = newRecord
 				save(record: newRecord)
 				container.delegate?.didAddRemoteRecord(record: newRecord, in: scope)

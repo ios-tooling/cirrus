@@ -32,7 +32,7 @@ public extension CKDatabase {
 			if let creationError { throw creationError }
 		} catch {
 			logg(error: error, "Failed to fetch/setup subscriptions")
-			Cirrus.instance.shouldCancelAfterError(error)
+			await Cirrus.instance.shouldCancelAfterError(error)
 		}
 		
 	}
