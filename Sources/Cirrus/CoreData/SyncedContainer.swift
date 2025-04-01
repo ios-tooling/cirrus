@@ -88,20 +88,20 @@ public class SyncedContainer: ObservableObject {
 		let isFirstSync = await importContext.perform { self.importContext.isEmpty }
 		
 		var database: CKDatabase! = db
-		if database == nil { database = await Cirrus.container.privateCloudDatabase }
+		if database == nil { database = Cirrus.container.privateCloudDatabase }
 		let zoneIDs = try await CirrusFetchDatabaseChangesOperation(database: database, tokens: Cirrus.instance.localState.changeTokens).changedZones().compactMap { $0.changedZoneID }
 		
 		let queryType: CKDatabase.RecordChangesQueryType = fromBeginning ? .all : (isFirstSync ? .createdOnly : .recent)
 		
 		do {
 			for try await change in try await database.changes(in: zoneIDs, queryType: queryType, tokens: await Cirrus.instance.localState.changeTokens) {
-				if SuiteLogger.instance.level == .verbose {
-					switch change {
-					case .deleted(_, let type): if !isFirstSync { logg("Deleted \(type)") }
-					case .changed(let id, let record): logg("Received \(record.recordType): \(id)")
-					case .badRecord: logg("Bad Record")
-					}
-				}
+//				if SuiteLogger.instance.level == .verbose {
+//					switch change {
+//					case .deleted(_, let type): if !isFirstSync { logg("Deleted \(type)") }
+//					case .changed(let id, let record): logg("Received \(record.recordType): \(id)")
+//					case .badRecord: logg("Bad Record")
+//					}
+//				}
 				await Cirrus.configuration.synchronizer?.process(downloadedChange: change, from: database)
 			}
 			await Cirrus.configuration.synchronizer?.finishImporting()
